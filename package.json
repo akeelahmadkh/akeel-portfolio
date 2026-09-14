@@ -1,0 +1,13 @@
+{
+  "name": "akeel-ai-mobile-portfolio",
+  "version": "1.0.0",
+  "description": "Full-stack MERN portfolio for Akeel — AI + Mobile Application Developer with 60fps Scroll Canvas animation",
+  "private": true,
+  "scripts": {
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "install:all": "cd client && npm install --legacy-peer-deps && cd ../server && npm install"
+  }
+}
