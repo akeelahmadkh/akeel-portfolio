@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
 interface ScrollCanvasProps {
   totalFrames?: number;
@@ -8,7 +8,7 @@ interface ScrollCanvasProps {
 
 export const ScrollCanvas: React.FC<ScrollCanvasProps> = ({
   totalFrames = 192,
-  folderPath = '/video_frames_30fps_png',
+  folderPath = "/video_frames_30fps_png",
   onLoaded,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -20,42 +20,45 @@ export const ScrollCanvas: React.FC<ScrollCanvasProps> = ({
   const targetFrameRef = useRef<number>(0);
   const animationFrameIdRef = useRef<number | null>(null);
 
-  // 1. Preload images
+  // 1. Progressive Image Preloading (Fast Launch Engine)
   useEffect(() => {
     let loadedCount = 0;
     const loadedImages: HTMLImageElement[] = [];
+    const CRITICAL_FRAMES = 15; // Shuruati 15 frames load hote hi site open ho jayegi
 
     const pad = (num: number, size: number) => {
-      let s = num + '';
-      while (s.length < size) s = '0' + s;
+      let s = num + "";
+      while (s.length < size) s = "0" + s;
       return s;
     };
+
+    let initialUnlocked = false;
 
     for (let i = 0; i < totalFrames; i++) {
       const img = new Image();
       const filename = `frame_${pad(i, 6)}.png`;
       img.src = `${folderPath}/${filename}`;
 
-      img.onload = () => {
+      const handleImageLoad = () => {
         loadedCount++;
-        const percent = Math.floor((loadedCount / totalFrames) * 100);
-        setLoadProgress(percent);
 
-        if (loadedCount === totalFrames) {
+        // Calculate progress up to critical threshold for smooth loader bar
+        const progressPercent = Math.min(
+          100,
+          Math.floor((loadedCount / CRITICAL_FRAMES) * 100),
+        );
+        setLoadProgress(progressPercent);
+
+        // Unlock site as soon as critical frames are ready
+        if (loadedCount >= CRITICAL_FRAMES && !initialUnlocked) {
+          initialUnlocked = true;
           setIsLoaded(true);
           if (onLoaded) onLoaded();
         }
       };
 
-      img.onerror = () => {
-        loadedCount++;
-        const percent = Math.floor((loadedCount / totalFrames) * 100);
-        setLoadProgress(percent);
-        if (loadedCount === totalFrames) {
-          setIsLoaded(true);
-          if (onLoaded) onLoaded();
-        }
-      };
+      img.onload = handleImageLoad;
+      img.onerror = handleImageLoad; // Handle missing frames without stalling
 
       loadedImages.push(img);
     }
@@ -67,7 +70,7 @@ export const ScrollCanvas: React.FC<ScrollCanvasProps> = ({
   const renderFrame = (frameIndex: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const img = images[frameIndex];
@@ -106,13 +109,13 @@ export const ScrollCanvas: React.FC<ScrollCanvasProps> = ({
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
       const maxScroll = Math.max(
         document.documentElement.scrollHeight - window.innerHeight,
-        1
+        1,
       );
       const scrollFraction = Math.min(Math.max(scrollTop / maxScroll, 0), 1);
       targetFrameRef.current = Math.floor(scrollFraction * (totalFrames - 1));
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
 
     // Lerp render loop for 60fps buttery smoothness
@@ -128,7 +131,7 @@ export const ScrollCanvas: React.FC<ScrollCanvasProps> = ({
 
       const frameToDraw = Math.min(
         Math.max(Math.round(currentFrameRef.current), 0),
-        totalFrames - 1
+        totalFrames - 1,
       );
 
       renderFrame(frameToDraw);
@@ -138,7 +141,7 @@ export const ScrollCanvas: React.FC<ScrollCanvasProps> = ({
     loop();
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener("scroll", handleScroll);
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
@@ -150,8 +153,8 @@ export const ScrollCanvas: React.FC<ScrollCanvasProps> = ({
     const handleResize = () => {
       renderFrame(Math.round(currentFrameRef.current));
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [images]);
 
   return (
@@ -176,7 +179,9 @@ export const ScrollCanvas: React.FC<ScrollCanvasProps> = ({
               style={{ width: `${loadProgress}%` }}
             />
           </div>
-          <p className="font-mono text-xs text-neutral-400 mt-2">{loadProgress}% loaded</p>
+          <p className="font-mono text-xs text-neutral-400 mt-2">
+            {loadProgress}% loaded
+          </p>
         </div>
       )}
 
